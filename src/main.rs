@@ -77,13 +77,6 @@ fn spawn_cube(
             panic!("No primary window")
         };
 
-        // set position of cube randomly inside window
-        let position = Vec3::new(
-            thread_rng().gen_range(-window.width() / 2.0..window.width() as f32 / 2.0),
-            thread_rng().gen_range(-window.height() / 2.0..window.height() as f32 / 2.0),
-            0.1,
-        );
-
         // set size of cube as 5% of the longest window side's length
         let size = Vec3::splat(window.width().max(window.height()) * 0.05);
 
@@ -96,7 +89,7 @@ fn spawn_cube(
             .insert_bundle(MaterialMesh2dBundle {
                 mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
                 transform: Transform::default()
-                    .with_translation(position)
+                    .with_translation(Vec3::ZERO)
                     .with_scale(size),
                 material: materials.add(ColorMaterial::from(Color::PURPLE)),
                 ..default()
