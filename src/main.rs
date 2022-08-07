@@ -15,8 +15,13 @@ struct Speed(f32);
 struct Direction(Vec3);
 
 // timer for cube spawns
-#[derive(Component)]
 struct SpawnTimer {
+    timer: Timer,
+}
+
+// timer to despawn cube
+#[derive(Component)]
+struct DespawnTimer {
     timer: Timer,
 }
 
@@ -34,6 +39,8 @@ fn main() {
         .add_system(spawn_cube)
         // move cube in its direction with its speed in delta seconds
         .add_system(movement)
+        // despawn cube after despawn timer finished
+        .add_system(despawn_cube)
         .run();
 }
 
@@ -85,6 +92,9 @@ fn spawn_cube(
             .insert(Cube)
             .insert(direction)
             .insert(Speed(20.))
+            .insert(DespawnTimer {
+                timer: Timer::new(std::time::Duration::from_secs(2), false),
+            })
             .insert_bundle(MaterialMesh2dBundle {
                 mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
                 transform: Transform::default()
@@ -100,5 +110,19 @@ fn spawn_cube(
 fn movement(mut query: Query<(&mut Transform, &Speed, &Direction)>, time: Res<Time>) {
     for (mut transform, speed, direction) in query.iter_mut() {
         transform.translation += direction.0 * speed.0 * time.delta_seconds();
+    }
+}
+
+// despawn cube after despawn timer finished
+fn despawn_cube(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut DespawnTimer)>,
+) {
+    for (entity, mut despawn_timer) in query.iter_mut() {
+        despawn_timer.timer.tick(time.delta());
+        if despawn_timer.timer.finished() {
+            commands.entity(entity).despawn();
+        }
     }
 }
