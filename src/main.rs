@@ -12,10 +12,7 @@ struct Speed(f32);
 
 // direction of cube
 #[derive(Component)]
-enum Direction {
-    X(i8),
-    Y(i8),
-}
+struct Direction(Vec3);
 
 // timer for cube spawns
 #[derive(Component)]
@@ -35,6 +32,8 @@ fn main() {
         .add_startup_system(setup)
         // spawn cubes every 2 seconds
         .add_system(spawn_cube)
+        // move cube in its direction with its speed in delta seconds
+        .add_system(movement)
         .run();
 }
 
@@ -63,10 +62,10 @@ fn spawn_cube(
     if spawn_timer.timer.finished() {
         // set direction of cube randomly
         let direction = match thread_rng().gen_range(0..4) {
-            0 => Direction::X(1),
-            1 => Direction::X(-1),
-            2 => Direction::Y(1),
-            3 => Direction::Y(-1),
+            0 => Direction(Vec3::X),
+            1 => Direction(Vec3::NEG_X),
+            2 => Direction(Vec3::Y),
+            3 => Direction(Vec3::NEG_Y),
             _ => unreachable!(),
         };
 
@@ -85,7 +84,7 @@ fn spawn_cube(
             .spawn()
             .insert(Cube)
             .insert(direction)
-            .insert(Speed(1.))
+            .insert(Speed(20.))
             .insert_bundle(MaterialMesh2dBundle {
                 mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
                 transform: Transform::default()
@@ -94,5 +93,12 @@ fn spawn_cube(
                 material: materials.add(ColorMaterial::from(Color::PURPLE)),
                 ..default()
             });
+    }
+}
+
+// move cube in its direction with its speed in delta seconds
+fn movement(mut query: Query<(&mut Transform, &Speed, &Direction)>, time: Res<Time>) {
+    for (mut transform, speed, direction) in query.iter_mut() {
+        transform.translation += direction.0 * speed.0 * time.delta_seconds();
     }
 }
