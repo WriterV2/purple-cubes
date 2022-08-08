@@ -11,7 +11,7 @@ struct Cube;
 struct Speed(f32);
 
 // direction of cube
-#[derive(Component)]
+#[derive(Component, PartialEq)]
 struct Direction(Vec3);
 
 // timer for cube spawns
@@ -39,6 +39,8 @@ fn main() {
         .add_system(spawn_cube)
         // move cube in its direction with its speed in delta seconds
         .add_system(movement)
+        // validate key input
+        .add_system(handle_key_input)
         // despawn cube after despawn timer finished
         .add_system(despawn_cube)
         .run();
@@ -98,9 +100,9 @@ fn spawn_cube(
             .spawn()
             .insert(Cube)
             .insert(direction)
-            .insert(Speed(20.))
+            .insert(Speed(150.))
             .insert(DespawnTimer {
-                timer: Timer::new(std::time::Duration::from_secs(2), false),
+                timer: Timer::new(std::time::Duration::from_secs(1), false),
             })
             .insert_bundle(MaterialMesh2dBundle {
                 mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
@@ -131,5 +133,33 @@ fn despawn_cube(
         if despawn_timer.timer.finished() {
             commands.entity(entity).despawn();
         }
+    }
+}
+
+// validate key input: score, if cube is purple + input matches with direction of cube
+fn handle_key_input(
+    mut commands: Commands,
+    keys: Res<Input<KeyCode>>,
+    query: Query<(Entity, &Direction, &Handle<ColorMaterial>)>,
+    materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for (entity, direction, color_handle) in query.iter() {
+        let color = materials.get(color_handle).unwrap().color;
+
+        let mut validate_input = |input, dir| {
+            if keys.just_pressed(input) {
+                if direction.0 == dir && color == Color::PURPLE {
+                    commands.entity(entity).despawn();
+                    println!("Point")
+                } else {
+                    println!("-")
+                }
+            }
+        };
+
+        validate_input(KeyCode::Up, Vec3::Y);
+        validate_input(KeyCode::Down, Vec3::NEG_Y);
+        validate_input(KeyCode::Right, Vec3::X);
+        validate_input(KeyCode::Left, Vec3::NEG_X);
     }
 }
