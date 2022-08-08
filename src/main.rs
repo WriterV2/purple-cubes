@@ -67,6 +67,13 @@ fn spawn_cube(
 
     // spawn cube if timer finished
     if spawn_timer.timer.finished() {
+        // set color of cube randomly - 80% purple
+        let color = if thread_rng().gen_bool(0.8) {
+            Color::PURPLE
+        } else {
+            Color::MIDNIGHT_BLUE
+        };
+
         // set direction of cube randomly
         let direction = match thread_rng().gen_range(0..4) {
             0 => Direction(Vec3::X),
@@ -100,7 +107,7 @@ fn spawn_cube(
                 transform: Transform::default()
                     .with_translation(Vec3::ZERO)
                     .with_scale(size),
-                material: materials.add(ColorMaterial::from(Color::PURPLE)),
+                material: materials.add(ColorMaterial::from(color)),
                 ..default()
             });
     }
