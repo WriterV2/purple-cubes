@@ -25,6 +25,13 @@ struct DespawnTimer {
     timer: Timer,
 }
 
+// player's score
+struct Score(i16);
+
+// scoreboard label
+#[derive(Component)]
+struct Scoreboard;
+
 fn main() {
     App::new()
         // window settings
@@ -41,18 +48,46 @@ fn main() {
         .add_system(movement)
         // validate key input
         .add_system(handle_key_input)
+        // update scoreboard to current score
+        .add_system(update_scoreboard)
         // despawn cube after despawn timer finished
         .add_system(despawn_cube)
         .run();
 }
 
 // spawn camera and add resources
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Windows>) {
+    // get primary window or panic
+    let window = if let Some(win) = windows.get_primary() {
+        win
+    } else {
+        panic!("No primary window")
+    };
+
     commands.spawn_bundle(Camera2dBundle::default());
     // timer for cube spawns with 2 seconds interval
     commands.insert_resource(SpawnTimer {
         timer: Timer::new(std::time::Duration::from_secs(2), true),
     });
+    // player's score starting with 0
+    commands.insert_resource(Score(0));
+
+    // scoreboard
+    commands
+        .spawn_bundle(Text2dBundle {
+            text: Text::from_section(
+                "Score:",
+                TextStyle {
+                    font: asset_server.load("fonts/5by7.ttf"),
+                    font_size: window.width().max(window.height()) * 0.03,
+                    color: Color::WHITE,
+                },
+            )
+            .with_alignment(TextAlignment::CENTER),
+            transform: Transform::from_xyz(0., window.height() * 0.3, 0.2),
+            ..default()
+        })
+        .insert(Scoreboard);
 }
 
 // spawn cubes every 2 seconds
@@ -136,24 +171,31 @@ fn despawn_cube(
     }
 }
 
-// validate key input: score, if cube is purple + input matches with direction of cube
+// handle keys: validate input
 fn handle_key_input(
     mut commands: Commands,
     keys: Res<Input<KeyCode>>,
     query: Query<(Entity, &Direction, &Handle<ColorMaterial>)>,
     materials: ResMut<Assets<ColorMaterial>>,
+    mut score: ResMut<Score>,
 ) {
+    // check for every active cube
     for (entity, direction, color_handle) in query.iter() {
-        let color = materials.get(color_handle).unwrap().color;
-
         let mut validate_input = |input, dir| {
             if keys.just_pressed(input) {
-                if direction.0 == dir && color == Color::PURPLE {
-                    commands.entity(entity).despawn();
-                    println!("Point")
+                // valid if:
+                // input matches direction of cube
+                // color of cube is purple
+                if direction.0 == dir && materials.get(color_handle).unwrap().color == Color::PURPLE
+                {
+                    // +1 score for correct input
+                    score.0 += 1;
                 } else {
-                    println!("-")
+                    // -5 score for incorrect input
+                    score.0 -= 5;
                 }
+                // despawn cube after key input
+                commands.entity(entity).despawn();
             }
         };
 
@@ -161,5 +203,12 @@ fn handle_key_input(
         validate_input(KeyCode::Down, Vec3::NEG_Y);
         validate_input(KeyCode::Right, Vec3::X);
         validate_input(KeyCode::Left, Vec3::NEG_X);
+    }
+}
+
+// update scoreboard to current score
+fn update_scoreboard(mut query: Query<&mut Text, With<Scoreboard>>, score: Res<Score>) {
+    for mut text in &mut query {
+        text.sections[0].value = format!("Score: {}", score.0);
     }
 }
