@@ -168,11 +168,18 @@ fn movement(mut query: Query<(&mut Transform, &Speed, &Direction)>, time: Res<Ti
 fn despawn_cube(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut DespawnTimer)>,
+    mut query: Query<(Entity, &mut DespawnTimer, &Handle<ColorMaterial>)>,
+    materials: ResMut<Assets<ColorMaterial>>,
+    mut score: ResMut<Score>,
 ) {
-    for (entity, mut despawn_timer) in query.iter_mut() {
+    for (entity, mut despawn_timer, color_handle) in query.iter_mut() {
         despawn_timer.timer.tick(time.delta());
         if despawn_timer.timer.finished() {
+            // TODO: Refactor this to separate system
+            // -5 score for missing input
+            if materials.get(color_handle).unwrap().color == Color::PURPLE {
+                score.0 -= 5;
+            }
             commands.entity(entity).despawn();
         }
     }
