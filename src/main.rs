@@ -15,6 +15,7 @@ struct Speed(f32);
 struct Direction(Vec3);
 
 // timer for cube spawns
+#[derive(Resource)]
 struct SpawnTimer {
     timer: Timer,
 }
@@ -26,6 +27,7 @@ struct DespawnTimer {
 }
 
 // player's score
+#[derive(Resource)]
 struct Score(i16);
 
 // scoreboard label
@@ -34,12 +36,22 @@ struct Scoreboard;
 
 fn main() {
     App::new()
-        // window settings
-        .insert_resource(WindowDescriptor {
-            title: "Purple Cubes".to_string(),
-            ..default()
-        })
-        .add_plugins(DefaultPlugins)
+        // default plugins
+        .add_plugins(
+            DefaultPlugins
+                .set(AssetPlugin {
+                    watch_for_changes: true,
+                    ..default()
+                })
+                // window settings
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        title: "Purple Cubes".to_string(),
+                        ..default()
+                    },
+                    ..default()
+                }),
+        )
         // spawn camera and add resources
         .add_startup_system(setup)
         // spawn cubes every 2 seconds
@@ -58,23 +70,21 @@ fn main() {
 // spawn camera and add resources
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Windows>) {
     // get primary window or panic
-    let window = if let Some(win) = windows.get_primary() {
-        win
-    } else {
-        panic!("No primary window")
+    let Some(window) = windows.get_primary() else {
+        panic!("No primary window");
     };
 
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
     // timer for cube spawns with 2 seconds interval
     commands.insert_resource(SpawnTimer {
-        timer: Timer::new(std::time::Duration::from_secs(2), true),
+        timer: Timer::new(std::time::Duration::from_secs(2), TimerMode::Repeating),
     });
     // player's score starting with 0
     commands.insert_resource(Score(0));
 
     // scoreboard
     commands
-        .spawn_bundle(Text2dBundle {
+        .spawn(Text2dBundle {
             text: Text::from_section(
                 "Score:",
                 TextStyle {
@@ -121,10 +131,8 @@ fn spawn_cube(
         };
 
         // get primary window or panic
-        let window = if let Some(win) = windows.get_primary() {
-            win
-        } else {
-            panic!("No primary window")
+        let Some(window) = windows.get_primary() else {
+            panic!("No primary window");
         };
 
         // set size of cube as 5% of the longest window side's length
@@ -132,14 +140,13 @@ fn spawn_cube(
 
         // spawn entitiy
         commands
-            .spawn()
-            .insert(Cube)
+            .spawn(Cube)
             .insert(direction)
             .insert(Speed(150.))
             .insert(DespawnTimer {
-                timer: Timer::new(std::time::Duration::from_secs(1), false),
+                timer: Timer::new(std::time::Duration::from_secs(1), TimerMode::Once),
             })
-            .insert_bundle(MaterialMesh2dBundle {
+            .insert(MaterialMesh2dBundle {
                 mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
                 transform: Transform::default()
                     .with_translation(Vec3::ZERO)
