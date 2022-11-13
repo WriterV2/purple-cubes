@@ -222,7 +222,9 @@ fn handle_key_input(
 
 // update scoreboard to current score
 fn update_scoreboard(mut query: Query<&mut Text, With<Scoreboard>>, score: Res<Score>) {
-    for mut text in &mut query {
-        text.sections[0].value = format!("Score: {}", score.0);
+    if score.is_changed() {
+        for mut text in &mut query {
+            text.sections[0].value = format!("Score: {}", score.0);
+        }
     }
 }
