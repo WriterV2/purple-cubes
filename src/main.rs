@@ -26,6 +26,12 @@ struct DespawnTimer {
     timer: Timer,
 }
 
+// 30 seconds timer for round
+#[derive(Resource)]
+struct RoundTimer {
+    timer: Timer,
+}
+
 // player's score
 #[derive(Resource)]
 struct Score(i16);
@@ -64,6 +70,7 @@ fn main() {
         .add_system(update_scoreboard)
         // despawn cube after despawn timer finished
         .add_system(despawn_cube)
+        .add_system(check_round_timer)
         .run();
 }
 
@@ -78,6 +85,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Wi
     // timer for cube spawns with 2 seconds interval
     commands.insert_resource(SpawnTimer {
         timer: Timer::new(std::time::Duration::from_secs(2), TimerMode::Repeating),
+    });
+    // 30 seconds timer for round
+    commands.insert_resource(RoundTimer {
+        timer: Timer::new(std::time::Duration::from_secs(30), TimerMode::Once),
     });
     // player's score starting with 0
     commands.insert_resource(Score(0));
@@ -226,5 +237,13 @@ fn update_scoreboard(mut query: Query<&mut Text, With<Scoreboard>>, score: Res<S
         for mut text in &mut query {
             text.sections[0].value = format!("Score: {}", score.0);
         }
+    }
+}
+
+// update round timer and check if rounded ended
+fn check_round_timer(mut timer: ResMut<RoundTimer>, time: Res<Time>) {
+    timer.timer.tick(time.delta());
+    if timer.timer.just_finished() {
+        println!("Finish");
     }
 }
