@@ -43,6 +43,13 @@ struct Scoreboard;
 // event for color handle ID of despawned cube
 struct DespawnedCubeColorHandleID(bevy::asset::HandleId);
 
+// app states
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum AppState {
+    DuringRound,
+    AfterRound,
+}
+
 fn main() {
     App::new()
         // default plugins
@@ -61,23 +68,29 @@ fn main() {
                     ..default()
                 }),
         )
+        // state for active round
+        .add_state(AppState::DuringRound)
+        // event for color handle id of despawned cube (to check for missing input)
         .add_event::<DespawnedCubeColorHandleID>()
         // spawn camera and add resources
-        .add_startup_system(setup)
-        // spawn cubes every 2 seconds
-        .add_system(spawn_cube)
-        // move cube in its direction with its speed in delta seconds
-        .add_system(movement)
-        // validate key input
-        .add_system(handle_key_input)
-        // update scoreboard to current score
-        .add_system(update_scoreboard)
-        // despawn cube after despawn timer finished
-        .add_system(despawn_cube)
-        // reduce score for missing input
-        .add_system(handle_missing_input)
-        // end round if time is up
-        .add_system(check_round_timer)
+        .add_system_set(SystemSet::on_enter(AppState::DuringRound).with_system(setup))
+        .add_system_set(
+            SystemSet::on_update(AppState::DuringRound)
+                // spawn cubes every 2 seconds
+                .with_system(spawn_cube)
+                // move cube in its direction with its speed in delta seconds
+                .with_system(movement)
+                // validate key input and add/deduct points
+                .with_system(handle_key_input)
+                // update scoreboard to current score
+                .with_system(update_scoreboard)
+                // despawn cube after despawn timer finished
+                .with_system(despawn_cube)
+                // reduce score for missing input
+                .with_system(handle_missing_input)
+                // end round if time is up
+                .with_system(check_round_timer),
+        )
         .run();
 }
 
@@ -269,9 +282,14 @@ fn update_scoreboard(mut query: Query<&mut Text, With<Scoreboard>>, score: Res<S
 }
 
 // update round timer and check if rounded ended
-fn check_round_timer(mut timer: ResMut<RoundTimer>, time: Res<Time>) {
+fn check_round_timer(
+    mut timer: ResMut<RoundTimer>,
+    time: Res<Time>,
+    mut app_state: ResMut<State<AppState>>,
+) {
     timer.timer.tick(time.delta());
     if timer.timer.just_finished() {
-        println!("Finish");
+        // transition to after-round state
+        app_state.set(AppState::AfterRound).unwrap();
     }
 }
