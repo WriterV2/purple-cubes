@@ -160,7 +160,7 @@ fn spawn_cube(
         commands
             .spawn(Cube)
             .insert(direction)
-            .insert(Speed(150.))
+            .insert(Speed(thread_rng().gen_range(size.x * 2.0..size.x * 3.0)))
             .insert(DespawnTimer {
                 timer: Timer::new(std::time::Duration::from_secs(1), TimerMode::Once),
             })
