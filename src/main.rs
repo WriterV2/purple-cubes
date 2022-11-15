@@ -40,6 +40,9 @@ struct Score(i16);
 #[derive(Component)]
 struct Scoreboard;
 
+// event for color handle ID of despawned cube
+struct DespawnedCubeColorHandleID(bevy::asset::HandleId);
+
 fn main() {
     App::new()
         // default plugins
@@ -58,6 +61,7 @@ fn main() {
                     ..default()
                 }),
         )
+        .add_event::<DespawnedCubeColorHandleID>()
         // spawn camera and add resources
         .add_startup_system(setup)
         // spawn cubes every 2 seconds
@@ -70,6 +74,9 @@ fn main() {
         .add_system(update_scoreboard)
         // despawn cube after despawn timer finished
         .add_system(despawn_cube)
+        // reduce score for missing input
+        .add_system(handle_missing_input)
+        // end round if time is up
         .add_system(check_round_timer)
         .run();
 }
@@ -178,20 +185,34 @@ fn movement(mut query: Query<(&mut Transform, &Speed, &Direction)>, time: Res<Ti
 // despawn cube after despawn timer finished
 fn despawn_cube(
     mut commands: Commands,
-    time: Res<Time>,
     mut query: Query<(Entity, &mut DespawnTimer, &Handle<ColorMaterial>)>,
-    materials: ResMut<Assets<ColorMaterial>>,
-    mut score: ResMut<Score>,
+    mut event: EventWriter<DespawnedCubeColorHandleID>,
+    time: Res<Time>,
 ) {
     for (entity, mut despawn_timer, color_handle) in query.iter_mut() {
         despawn_timer.timer.tick(time.delta());
         if despawn_timer.timer.finished() {
-            // TODO: Refactor this to separate system
-            // -5 score for missing input
-            if materials.get(color_handle).unwrap().color == Color::PURPLE {
-                score.0 -= 5;
-            }
+            // send color cube's color handle id to check for missing input
+            event.send(DespawnedCubeColorHandleID(color_handle.id()));
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+// deduct 5 points for missing input for purple cube
+fn handle_missing_input(
+    mut event: EventReader<DespawnedCubeColorHandleID>,
+    mut score: ResMut<Score>,
+    materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for handle in event.iter() {
+        if materials
+            .get(&materials.get_handle(handle.0))
+            .unwrap()
+            .color
+            == Color::PURPLE
+        {
+            score.0 -= 5;
         }
     }
 }
