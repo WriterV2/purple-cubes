@@ -172,6 +172,13 @@ fn spawn_cube(
                 material: materials.add(ColorMaterial::from(color)),
                 ..default()
             });
+
+        // set spawn timer duration randomly between 1.0 and 1.5 seconds
+        spawn_timer
+            .timer
+            .set_duration(std::time::Duration::from_secs_f32(
+                thread_rng().gen_range(1.0..1.5),
+            ));
     }
 }
 
