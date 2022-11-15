@@ -73,7 +73,9 @@ fn main() {
         // event for color handle id of despawned cube (to check for missing input)
         .add_event::<DespawnedCubeColorHandleID>()
         // spawn camera and add resources
-        .add_system_set(SystemSet::on_enter(AppState::DuringRound).with_system(setup))
+        .add_startup_system(setup)
+        // (re)set score to 0 and (re)start round timer
+        .add_system_set(SystemSet::on_enter(AppState::DuringRound).with_system(round_setup))
         .add_system_set(
             SystemSet::on_update(AppState::DuringRound)
                 // spawn cubes every 2 seconds
@@ -129,6 +131,16 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Wi
             ..default()
         })
         .insert(Scoreboard);
+}
+
+fn round_setup(mut score: ResMut<Score>, mut round_timer: ResMut<RoundTimer>) {
+    // (Re)set score to 0
+    score.0 = 0;
+
+    // Restart round timer if finished
+    if round_timer.timer.finished() {
+        round_timer.timer.reset();
+    }
 }
 
 // spawn cubes every 2 seconds
