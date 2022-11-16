@@ -93,6 +93,7 @@ fn main() {
                 // end round if time is up
                 .with_system(check_round_timer),
         )
+        .add_system_set(SystemSet::on_enter(AppState::AfterRound).with_system(after_round_setup))
         .run();
 }
 
@@ -133,6 +134,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Wi
         .insert(Scoreboard);
 }
 
+// reset score and timer at the beginning of round
 fn round_setup(mut score: ResMut<Score>, mut round_timer: ResMut<RoundTimer>) {
     // (Re)set score to 0
     score.0 = 0;
@@ -141,6 +143,32 @@ fn round_setup(mut score: ResMut<Score>, mut round_timer: ResMut<RoundTimer>) {
     if round_timer.timer.finished() {
         round_timer.timer.reset();
     }
+}
+
+// display message and instruction after round
+fn after_round_setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    windows: Res<Windows>,
+) {
+    // get primary window or panic
+    let Some(window) = windows.get_primary() else {
+        panic!("No primary window");
+    };
+
+    commands.spawn(Text2dBundle {
+        text: Text::from_section(
+            "Click any arrow key to restart",
+            TextStyle {
+                font: asset_server.load("fonts/5by7.ttf"),
+                font_size: window.width().max(window.height()) * 0.02,
+                color: Color::WHITE,
+            },
+        )
+        .with_alignment(TextAlignment::CENTER),
+        transform: Transform::from_xyz(0., window.height() * -0.3, 0.2),
+        ..default()
+    });
 }
 
 // spawn cubes every 2 seconds
