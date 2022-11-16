@@ -98,12 +98,7 @@ fn main() {
 }
 
 // spawn camera and add resources
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Windows>) {
-    // get primary window or panic
-    let Some(window) = windows.get_primary() else {
-        panic!("No primary window");
-    };
-
+fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
     // timer for cube spawns with 2 seconds interval
     commands.insert_resource(SpawnTimer {
@@ -115,6 +110,23 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Wi
     });
     // player's score starting with 0
     commands.insert_resource(Score(0));
+}
+
+// reset score and timer at the beginning of round
+fn round_setup(
+    mut commands: Commands,
+    mut score: ResMut<Score>,
+    mut round_timer: ResMut<RoundTimer>,
+    asset_server: Res<AssetServer>,
+    windows: Res<Windows>,
+) {
+    // get primary window or panic
+    let Some(window) = windows.get_primary() else {
+        panic!("No primary window");
+    };
+
+    // (Re)set score to 0
+    score.0 = 0;
 
     // scoreboard
     commands
@@ -132,12 +144,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Wi
             ..default()
         })
         .insert(Scoreboard);
-}
-
-// reset score and timer at the beginning of round
-fn round_setup(mut score: ResMut<Score>, mut round_timer: ResMut<RoundTimer>) {
-    // (Re)set score to 0
-    score.0 = 0;
 
     // Restart round timer if finished
     if round_timer.timer.finished() {
