@@ -156,15 +156,17 @@ fn after_round_setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     windows: Res<Windows>,
+    score: Res<Score>,
 ) {
     // get primary window or panic
     let Some(window) = windows.get_primary() else {
         panic!("No primary window");
     };
 
+    // display instruction
     commands.spawn(Text2dBundle {
         text: Text::from_section(
-            "Click any arrow key to restart",
+            "Press any arrow key to restart",
             TextStyle {
                 font: asset_server.load("fonts/5by7.ttf"),
                 font_size: window.width().max(window.height()) * 0.02,
@@ -173,6 +175,54 @@ fn after_round_setup(
         )
         .with_alignment(TextAlignment::CENTER),
         transform: Transform::from_xyz(0., window.height() * -0.3, 0.2),
+        ..default()
+    });
+
+    // messages based on score
+    const MESSAGES: [[&str; 3]; 3] = [
+        // < 5
+        [
+            "Forgot to read the rules? :D",
+            "Not really trying, are you? -_-",
+            "Congrats for saving your energy!",
+        ],
+        // < 20
+        [
+            "Great! Let's try for greater!",
+            "It's easy! But there's always more to achieve, right? :)",
+            "You're good with these purple cubes, aren't you?",
+        ],
+        // > 20
+        [
+            "Wow! That's amazing!",
+            "You're aiming for the sky!",
+            "Stunning! Don't forget to take a break!",
+        ],
+    ];
+    // chose random message based on score
+    let msg = if score.0 < 5 {
+        String::from(MESSAGES[0][thread_rng().gen_range(0..2)])
+    } else if score.0 < 20 {
+        String::from(MESSAGES[1][thread_rng().gen_range(0..2)])
+    } else {
+        String::from(MESSAGES[2][thread_rng().gen_range(0..2)])
+    };
+
+    // display message about score
+    commands.spawn(Text2dBundle {
+        text: Text::from_section(
+            msg,
+            TextStyle {
+                font: asset_server.load("fonts/5by7.ttf"),
+                font_size: window.width().max(window.height()) * 0.05,
+                color: Color::PURPLE,
+            },
+        )
+        .with_alignment(TextAlignment::CENTER),
+        text_2d_bounds: bevy::text::Text2dBounds {
+            size: Vec2::new(window.width() * 0.9, window.height() / 2.),
+        },
+        transform: Transform::from_xyz(0., 0., 0.2),
         ..default()
     });
 }
