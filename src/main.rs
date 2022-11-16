@@ -93,7 +93,11 @@ fn main() {
                 // end round if time is up
                 .with_system(check_round_timer),
         )
+        // clean up cubes after round ended
+        .add_system_set(SystemSet::on_exit(AppState::DuringRound).with_system(cleanup::<Cube>))
         .add_system_set(SystemSet::on_enter(AppState::AfterRound).with_system(after_round_setup))
+        // clean up text UI after leaving after-round
+        .add_system_set(SystemSet::on_exit(AppState::AfterRound).with_system(cleanup::<Text>))
         .run();
 }
 
@@ -387,5 +391,12 @@ fn check_round_timer(
     if timer.timer.just_finished() {
         // transition to after-round state
         app_state.set(AppState::AfterRound).unwrap();
+    }
+}
+
+// cleanup all entities with component T
+fn cleanup<T: Component>(mut commands: Commands, query: Query<Entity, With<T>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn();
     }
 }
