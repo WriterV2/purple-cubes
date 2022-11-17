@@ -46,6 +46,7 @@ struct DespawnedCubeColorHandleID(bevy::asset::HandleId);
 // app states
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum AppState {
+    Menu,
     DuringRound,
     AfterRound,
 }
@@ -95,7 +96,12 @@ fn main() {
         )
         // clean up cubes after round ended
         .add_system_set(SystemSet::on_exit(AppState::DuringRound).with_system(cleanup::<Cube>))
+        // set up state after round
         .add_system_set(SystemSet::on_enter(AppState::AfterRound).with_system(after_round_setup))
+        // restart with left arrow or go to menu with right arrow
+        .add_system_set(
+            SystemSet::on_update(AppState::AfterRound).with_system(handle_after_round_key_input),
+        )
         // clean up text UI after leaving after-round
         .add_system_set(SystemSet::on_exit(AppState::AfterRound).with_system(cleanup::<Text>))
         .run();
@@ -170,7 +176,7 @@ fn after_round_setup(
     // display instruction
     commands.spawn(Text2dBundle {
         text: Text::from_section(
-            "Press any arrow key to restart",
+            "Left arrow - Restart | Right arrow - Menu",
             TextStyle {
                 font: asset_server.load("fonts/5by7.ttf"),
                 font_size: window.width().max(window.height()) * 0.02,
@@ -334,6 +340,15 @@ fn handle_missing_input(
         {
             score.0 -= 5;
         }
+    }
+}
+
+// handle keys in after-round state: left for restart, right for menu
+fn handle_after_round_key_input(keys: Res<Input<KeyCode>>, mut app_state: ResMut<State<AppState>>) {
+    if keys.just_pressed(KeyCode::Left) {
+        app_state.set(AppState::DuringRound).unwrap();
+    } else if keys.just_pressed(KeyCode::Right) {
+        app_state.set(AppState::Menu).unwrap();
     }
 }
 
